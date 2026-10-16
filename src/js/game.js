@@ -1,6 +1,6 @@
 /* ---- game state, level loading, physics, rules ---- */
 const T=16,VW=512,VH=240,H=15;
-let W,grid,player,enemies,parts,pops,flies,camX,state='menu',gems=0,score=0,lives=3,time=0,flagX=0,winT=0,lvl=0;
+let W,level,checks,respawnAt,grid,player,enemies,parts,pops,flies,camX,state='menu',gems=0,score=0,lives=3,time=0,flagX=0,winT=0,lvl=0;
 
 /* ---- record ---- */
 let best=0;
@@ -10,7 +10,7 @@ function saveBest(){if(score>best){best=score;try{localStorage.setItem('ryzhik-b
 /* ---- level loading: ASCII map -> tile grid + objects ---- */
 function parseLevel(L){
   if(L.map.length!==H)throw new Error(`Уровень «${L.name}»: нужно ${H} строк, а их ${L.map.length}`);
-  const w=L.map[0].length,out={grid:[],beetles:[],bats:[],start:[3,12],flag:w-14};
+  const w=L.map[0].length,out={grid:[],beetles:[],bats:[],checks:[],start:[3,12],flag:w-14};
   L.map.forEach((row,y)=>{
     if(row.length!==w)throw new Error(`Уровень «${L.name}», строка ${y+1}: длина ${row.length}, а должна быть ${w}`);
     out.grid.push([...row].map((c,x)=>{
@@ -18,6 +18,7 @@ function parseLevel(L){
       if(c==='v'){out.bats.push([x,y]);return '.'}
       if(c==='@'){out.start=[x,y];return '.'}
       if(c==='!'){out.flag=x;return '.'}
+      if(c==='k'){out.checks.push([x,y]);return '.'}
       return c;
     }));
   });
@@ -26,14 +27,24 @@ function parseLevel(L){
 
 function reset(full){
   if(full){gems=0;score=0;lives=3;lvl=0;}
-  const lv=parseLevel(LEVELS[lvl]);
-  grid=lv.grid;W=grid[0].length;flagX=lv.flag;
-  const [sx,sy]=lv.start;
-  player={x:sx*T,y:(sy+1)*T-14,w:12,h:14,vx:0,vy:0,on:false,face:1,coy:0,buf:0,inv:0,dead:0,step:0,dbl:false,usedDbl:false};
-  enemies=lv.beetles.map(([x,y])=>({type:'beetle',x:x*T+1,y:(y+1)*T-12,w:14,h:12,vx:-0.55,alive:true,squash:0}));
-  lv.bats.forEach(([x,y])=>enemies.push({type:'bat',x:x*T,x0:x*T,y:y*T,y0:y*T,w:14,h:10,vx:-0.7,alive:true,squash:0,ph:x}));
-  parts=[];pops=[];camX=0;winT=0;
+  level=parseLevel(LEVELS[lvl]);
+  grid=level.grid;W=grid[0].length;flagX=level.flag;
+  checks=level.checks.map(([x,y])=>({x,y,lit:false,t:0}));
+  respawnAt=level.start;winT=0;
   flies=[...Array(28)].map((_,i)=>({x:(i*173)%W*T,y:40+(i*61)%130,ph:i*1.7}));
+  spawn(false);
+}
+/* puts Ryzhik at the last lit checkpoint (or the start) and brings enemies back;
+   the tile grid is kept, so collected amber and broken boxes stay gone */
+function spawn(dbl){
+  const [sx,sy]=respawnAt;
+  player={x:sx*T,y:(sy+1)*T-14,w:12,h:14,vx:0,vy:0,on:false,face:1,coy:0,buf:0,inv:0,dead:0,step:0,dbl,usedDbl:false};
+  enemies=level.beetles.map(([x,y])=>({type:'beetle',x:x*T+1,y:(y+1)*T-12,w:14,h:12,vx:-0.55,alive:true,squash:0}));
+  level.bats.forEach(([x,y])=>enemies.push({type:'bat',x:x*T,x0:x*T,y:y*T,y0:y*T,w:14,h:10,vx:-0.7,alive:true,squash:0,ph:x}));
+  // don't drop an enemy right on top of the respawn point
+  enemies=enemies.filter(e=>Math.abs(e.x-player.x)>3*T);
+  parts=[];pops=[];
+  camX=Math.max(0,Math.min(player.x-VW*.4,W*T-VW));
 }
 const solid=c=>c==='#'||c==='='||c==='B'||c==='G'||c==='P'||c==='u';
 const at=(tx,ty)=>(tx<0||tx>=W)?'#':(ty<0||ty>=H)?'.':grid[ty][tx];
@@ -75,7 +86,7 @@ function update(){
   if(state==='win'){winT++;p.vx=0;p.vy=Math.min(p.vy+.3,3);moveY(p);if(winT===150)levelWon();return}
   if(p.dead){p.dead++;p.vy+=.35;p.y+=p.vy;if(p.dead>110){lives--;
     if(lives<=0)gameOver();
-    else{const g=gems,s=score;reset(false);gems=g;score=s}}return}
+    else spawn(p.dbl)}return}
 
   const max=run()?3.1:2.0, acc=p.on?.16:.11;
   if(left()){p.vx=Math.max(p.vx-acc,-max);p.face=-1}
@@ -117,6 +128,13 @@ function update(){
       if(p.vy>0&&p.y+p.h-p.vy<=e.y+6){killEnemy(e,false);p.vy=jumpHeld()?-6.5:-4;p.usedDbl=false}
       else if(!p.inv)die();
     }
+  }
+  // checkpoints: a lantern lights up as Ryzhik passes it
+  for(const c of checks){
+    if(c.lit){c.t++;continue}
+    if(p.x+p.w/2>=c.x*T+8){c.lit=true;respawnAt=[c.x,c.y];
+      for(let i=0;i<10;i++)parts.push({x:c.x*T+8,y:c.y*T-14,vx:Math.cos(i*.63)*1.3,vy:Math.sin(i*.63)*1.1-.6,t:40,c:'#ffc857',s:1.5});
+      [659,880,1319].forEach((f,i)=>setTimeout(()=>beep(f,.12,'triangle',.05),i*80))}
   }
   // goal
   if(p.x+p.w>=flagX*T+6&&state==='play'){state='win';score+=1000;p.vx=0;[523,659,784,1047].forEach((f,i)=>setTimeout(()=>beep(f,.18,'triangle',.07),i*130))}

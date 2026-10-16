@@ -123,6 +123,20 @@ function drawBeacon(){
   R(bx+2,by-126,12,6,`rgba(255,200,87,${glow})`);
   if(lit){ctx.fillStyle='rgba(255,200,87,.18)';ctx.beginPath();const a=Math.sin(winT/20)*.6;ctx.moveTo(bx+8,by-123);ctx.lineTo(bx+8+Math.cos(a)*260,by-123-40);ctx.lineTo(bx+8+Math.cos(a)*260,by-123+40);ctx.fill()}
 }
+/* checkpoint: lantern on a post; dark until Ryzhik passes it, then glows */
+function drawCheck(c){
+  const x=c.x*T-camX,by=(c.y+1)*T;
+  if(x<-40||x>VW+40)return;
+  if(c.lit){const fl=.85+Math.sin(time/7+c.x)*.08+Math.sin(time/3.1)*.04,r=22+Math.min(c.t,20)*.4;
+    const g=ctx.createRadialGradient(x+8,by-24,1,x+8,by-24,r);g.addColorStop(0,`rgba(255,200,87,${.45*fl})`);g.addColorStop(1,'rgba(255,200,87,0)');
+    ctx.fillStyle=g;ctx.beginPath();ctx.arc(x+8,by-24,r,0,7);ctx.fill()}
+  R(x+7,by-20,2,20,'#5a3f33');R(x+5,by-2,6,2,'#3a2a24');            // post + foot
+  R(x+5,by-30,6,1,'#3a3150');R(x+6,by-31,4,1,'#3a3150');            // roof
+  R(x+4,by-29,8,9,'#3a3150');                                         // frame
+  R(x+5,by-28,6,7,c.lit?'#ffc857':'#24203a');                         // glass
+  if(c.lit)R(x+7,by-26,2,3,'#fff3c4');
+  R(x+7,by-28,2,7,'#3a315066');
+}
 function drawHouse(){
   const bx=flagX*T-camX;
   if(bx>VW+80||bx<-80)return;
@@ -173,6 +187,7 @@ function draw(){
   drawBg();
   const c0=Math.floor(camX/T),c1=c0+Math.ceil(VW/T)+1;
   for(let ty=0;ty<H;ty++)for(let tx=c0;tx<=c1&&tx<W;tx++){const c=grid[ty][tx];if(c!=='.')tile(c,tx*T-sn(camX),ty*T,tx,ty)}
+  checks.forEach(drawCheck);
   if(LEVELS[lvl].theme==='valley')drawBeacon();else drawHouse();
   enemies.forEach(e=>{if(e.x>camX-30&&e.x<camX+VW+30)(e.type==='bat'?drawBat:drawBeetle)(e)});
   for(const q of parts){if(q.s){ctx.fillStyle=q.c;ctx.globalAlpha=Math.max(0,1-(q.t-40)/40);ctx.beginPath();ctx.arc(q.x-camX,q.y,q.s,0,7);ctx.fill();ctx.globalAlpha=1}else R(q.x-camX,q.y,6,6,q.c)}
