@@ -1,6 +1,6 @@
 /* ---- game state, level loading, physics, rules ---- */
 const T=16,VW=512,VH=240,H=15;
-let W,level,checks,respawnAt,grid,player,enemies,parts,pops,flies,camX,state='menu',gems=0,score=0,lives=3,time=0,flagX=0,winT=0,lvl=0;
+let W,level,checks,respawnAt,grid,player,enemies,sparks,parts,pops,flies,camX,state='menu',gems=0,score=0,lives=3,time=0,flagX=0,winT=0,lvl=0;
 
 /* ---- record ---- */
 let best=0;
@@ -10,12 +10,13 @@ function saveBest(){if(score>best){best=score;try{localStorage.setItem('ryzhik-b
 /* ---- level loading: ASCII map -> tile grid + objects ---- */
 function parseLevel(L){
   if(L.map.length!==H)throw new Error(`Уровень «${L.name}»: нужно ${H} строк, а их ${L.map.length}`);
-  const w=L.map[0].length,out={grid:[],beetles:[],bats:[],checks:[],start:[3,12],flag:w-14};
+  const w=L.map[0].length,out={grid:[],beetles:[],hogs:[],bats:[],checks:[],start:[3,12],flag:w-14};
   L.map.forEach((row,y)=>{
     if(row.length!==w)throw new Error(`Уровень «${L.name}», строка ${y+1}: длина ${row.length}, а должна быть ${w}`);
     out.grid.push([...row].map((c,x)=>{
       if(c==='b'){out.beetles.push([x,y]);return '.'}
       if(c==='v'){out.bats.push([x,y]);return '.'}
+      if(c==='e'){out.hogs.push([x,y]);return '.'}
       if(c==='@'){out.start=[x,y];return '.'}
       if(c==='!'){out.flag=x;return '.'}
       if(c==='k'){out.checks.push([x,y]);return '.'}
@@ -38,8 +39,10 @@ function reset(full){
    the tile grid is kept, so collected amber and broken boxes stay gone */
 function spawn(dbl){
   const [sx,sy]=respawnAt;
-  player={x:sx*T,y:(sy+1)*T-14,w:12,h:14,vx:0,vy:0,on:false,face:1,coy:0,buf:0,inv:0,dead:0,step:0,dbl,usedDbl:false};
+  player={x:sx*T,y:(sy+1)*T-14,w:12,h:14,vx:0,vy:0,on:false,face:1,coy:0,buf:0,inv:0,dead:0,step:0,dbl,usedDbl:false,fire:false,cool:0};
+  sparks=[];
   enemies=level.beetles.map(([x,y])=>({type:'beetle',x:x*T+1,y:(y+1)*T-12,w:14,h:12,vx:-0.55,alive:true,squash:0}));
+  level.hogs.forEach(([x,y])=>enemies.push({type:'hog',x:x*T+1,y:(y+1)*T-11,w:14,h:11,vx:-0.4,alive:true,squash:0}));
   level.bats.forEach(([x,y])=>enemies.push({type:'bat',x:x*T,x0:x*T,y:y*T,y0:y*T,w:14,h:10,vx:-0.7,alive:true,squash:0,ph:x}));
   // don't drop an enemy right on top of the respawn point
   enemies=enemies.filter(e=>Math.abs(e.x-player.x)>3*T);
@@ -61,19 +64,32 @@ function moveY(o,onHead){
   const x0=Math.floor(o.x/T),x1=Math.floor((o.x+o.w-1)/T);
   if(o.vy>0){const ty=Math.floor((o.y+o.h)/T);for(let x=x0;x<=x1;x++)if(solid(at(x,ty))){o.y=ty*T-o.h;o.vy=0;o.on=true;return}}
   else if(o.vy<0){const ty=Math.floor(o.y/T);
-    let best=null,bd=99;for(let x=x0;x<=x1;x++)if(solid(at(x,ty))){const d=Math.abs((x+.5)*T-(o.x+o.w/2));if(d<bd){bd=d;best=x}}
+    let best=null,bd=99;for(let x=x0;x<=x1;x++)if(solid(at(x,ty))||(onHead&&at(x,ty)==='h')){const d=Math.abs((x+.5)*T-(o.x+o.w/2));if(d<bd){bd=d;best=x}}
     if(best!==null){o.y=(ty+1)*T;o.vy=0;onHead&&onHead(best,ty)}}
 }
 function bump(tx,ty){
   const c=grid[ty][tx];
   if(c==='G'){grid[ty][tx]='u';gems++;score+=100;pops.push({x:tx*T+8,y:ty*T,t:0,txt:'+100'});beep(988,.1);setTimeout(()=>beep(1319,.15),70);}
+  else if(c==='h'){grid[ty][tx]='u';if(ty>0&&!solid(grid[ty-1][tx]))grid[ty-1][tx]='w';score+=200;
+    pops.push({x:tx*T+8,y:ty*T,t:0,txt:'!'});[523,784,1047].forEach((f,i)=>setTimeout(()=>beep(f,.09,'triangle',.06),i*50));}
   else if(c==='P'){grid[ty][tx]='u';if(ty>0&&!solid(grid[ty-1][tx]))grid[ty-1][tx]='f';beep(660,.1,'triangle',.06,1320);}
   else if(c==='B'){grid[ty][tx]='.';score+=50;beep(160,.12,'square',.06,60);
     for(let i=0;i<4;i++)parts.push({x:tx*T+4+(i%2)*8,y:ty*T+4+(i>>1)*8,vx:(i%2?1.4:-1.4),vy:-4+(i>>1)*1.5,t:0,c:'#d9924e'});}
   else beep(110,.05);
-  enemies.forEach(e=>{if(e.alive&&e.type==='beetle'&&Math.abs(e.x+7-(tx*T+8))<14&&Math.abs(e.y+e.h-ty*T)<3)killEnemy(e,true)});
+  enemies.forEach(e=>{if(e.alive&&e.type!=='bat'&&Math.abs(e.x+7-(tx*T+8))<14&&Math.abs(e.y+e.h-ty*T)<3)killEnemy(e,true)});
 }
 function killEnemy(e,flip){e.alive=false;e.squash=1;e.flip=flip||e.type==='bat';e.vy=e.flip?-2:0;score+=200;beep(523,.06);setTimeout(()=>beep(784,.08),50)}
+/* enemy or spikes: with the fern flower Ryzhik only loses the fire, otherwise he dies */
+function hurt(){
+  const p=player;if(p.inv||p.dead)return;
+  if(p.fire){p.fire=false;p.inv=90;p.vy=Math.min(p.vy,-3.5);puff(p.x+6,p.y+7,'#ff8a3d');beep(300,.25,'sawtooth',.05,120);return}
+  die();
+}
+function shoot(){
+  const p=player;if(!p.fire||p.dead||p.cool>0||sparks.length>=2)return;
+  p.cool=14;sparks.push({x:p.x+(p.face>0?p.w:-6),y:p.y+4,w:6,h:6,vx:4.2*p.face,vy:1,t:0});
+  beep(880,.06,'square',.035,440);
+}
 function die(){
   if(player.dead)return;player.dead=1;player.vy=-6;player.vx=0;beep(392,.5,'triangle',.07,98);
 }
@@ -102,13 +118,27 @@ function update(){
   if(p.x<camX)p.x=camX,p.vx=Math.max(0,p.vx);
   if(Math.abs(p.vx)>.1&&p.on)p.step+=Math.abs(p.vx)*.12;
   if(p.inv>0)p.inv--;
+  if(p.cool>0)p.cool--;
+  if(fireReq){fireReq=false;shoot()}
+
+  // fire sparks: bounce along the ground, burn any enemy they touch
+  for(const k of sparks){
+    k.t++;k.vy=Math.min(k.vy+.35,6);
+    if(moveX(k))k.t=999;
+    moveY(k);if(k.on)k.vy=-3.2;
+    if(k.x<camX-20||k.x>camX+VW+20||k.y>H*T)k.t=999;
+    for(const e of enemies)if(e.alive&&k.t<999&&hit(k,e)){killEnemy(e,true);k.t=999;puff(k.x+3,k.y+3,'#ffc857')}
+    if(k.t===999)for(let i=0;i<3;i++)parts.push({x:k.x+3,y:k.y+3,vx:(i-1)*.8,vy:-1-i*.3,t:50,c:'#ff8a3d',s:1.2});
+  }
+  sparks=sparks.filter(k=>k.t<90);
 
   // gems, feathers & spikes
   const x0=Math.floor(p.x/T),x1=Math.floor((p.x+p.w-1)/T),y0=Math.floor(p.y/T),y1=Math.floor((p.y+p.h-1)/T);
   for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){const c=at(x,y);
     if(c==='o'){grid[y][x]='.';gems++;score+=50;beep(1175,.07,'square',.035)}
     if(c==='f'){grid[y][x]='.';p.dbl=true;score+=500;pops.push({x:x*T+8,y:y*T,t:0,txt:'ПЕРО'});[784,988,1175,1568].forEach((f,i)=>setTimeout(()=>beep(f,.1,'triangle',.05),i*60))}
-    if(c==='^'&&p.y+p.h>y*T+8)die()}
+    if(c==='w'){grid[y][x]='.';p.fire=true;score+=1000;pops.push({x:x*T+8,y:y*T,t:0,txt:'ОГОНЬ'});[523,659,784,1047,1319].forEach((f,i)=>setTimeout(()=>beep(f,.1,'square',.045),i*55))}
+    if(c==='^'&&p.y+p.h>y*T+8){if(p.fire&&!p.inv)p.vy=-6;hurt()}}
   if(p.y>H*T+20)die();
 
   // enemies
@@ -125,8 +155,8 @@ function update(){
       e.vy=(e.vy||0)+.4;moveY(e);if(e.y>H*T)e.alive=false;
     }
     if(hit(p,e)){
-      if(p.vy>0&&p.y+p.h-p.vy<=e.y+6){killEnemy(e,false);p.vy=jumpHeld()?-6.5:-4;p.usedDbl=false}
-      else if(!p.inv)die();
+      if(e.type!=='hog'&&p.vy>0&&p.y+p.h-p.vy<=e.y+6){killEnemy(e,false);p.vy=jumpHeld()?-6.5:-4;p.usedDbl=false}
+      else hurt();
     }
   }
   // checkpoints: a lantern lights up as Ryzhik passes it

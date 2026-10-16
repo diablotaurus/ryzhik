@@ -68,7 +68,20 @@ function tile(c,x,y,tx,ty){
     ctx.fillStyle='#ffc857';ctx.beginPath();ctx.moveTo(x+8,y+3);ctx.lineTo(x+8+w/2,y+8);ctx.lineTo(x+8,y+13);ctx.lineTo(x+8-w/2,y+8);ctx.fill();R(x+7,y+5,1,2,'#fff')}
   else if(c==='f'){const fy=y+8+Math.sin(time/12)*2;
     ctx.fillStyle='rgba(191,238,224,.25)';ctx.beginPath();ctx.arc(x+8,fy,8,0,7);ctx.fill();feather(x+8,fy,1,'#e8fff6')}
+  else if(c==='w'){fernFlower(x+8,y+9+Math.sin(time/14)*1.5)}
+  else if(c==='h'){ // hidden block: invisible, only a rare faint twinkle gives it away
+    const k=(time+tx*37)%260;if(k<18){const a=Math.sin(k/18*Math.PI)*.55;ctx.fillStyle=`rgba(255,240,200,${a})`;ctx.fillRect(x+7,y+5,1,5);ctx.fillRect(x+5,y+7,5,1)}}
   else if(c==='^'){ctx.fillStyle=t.spike;for(let i=0;i<3;i++){ctx.beginPath();ctx.moveTo(x+i*5+1,y+T);ctx.lineTo(x+i*5+3.5,y+6);ctx.lineTo(x+i*5+6,y+T);ctx.fill()}}
+}
+/* fern flower (цветок папоротника): glowing ember petals on a little stem */
+function fernFlower(cx,cy,s=1){
+  ctx.save();ctx.translate(cx,cy);ctx.scale(s,s);
+  const g=ctx.createRadialGradient(0,-2,0,0,-2,10);g.addColorStop(0,`rgba(255,120,60,${.45+Math.sin(time/6)*.12})`);g.addColorStop(1,'rgba(255,120,60,0)');
+  ctx.fillStyle=g;ctx.beginPath();ctx.arc(0,-2,10,0,7);ctx.fill();
+  ctx.fillStyle='#3e8c66';ctx.fillRect(-.5,0,1,6);ctx.fillRect(-3,3,3,1);ctx.fillRect(1,4,3,1);
+  ctx.fillStyle='#ff5a3d';for(let i=0;i<5;i++){const a=i*1.2566+time/40;ctx.beginPath();ctx.ellipse(Math.cos(a)*2.6,-2+Math.sin(a)*2.6,2.2,1.3,a,0,7);ctx.fill()}
+  ctx.fillStyle='#ffc857';ctx.beginPath();ctx.arc(0,-2,1.6,0,7);ctx.fill();
+  ctx.restore();
 }
 function feather(cx,cy,s,col){
   ctx.save();ctx.translate(cx,cy);ctx.rotate(-.6);ctx.scale(s,s);
@@ -86,7 +99,8 @@ function drawFox(p){
   R(3,0,10,7,'#ff8a3d');R(9,3,5,3,'#fff3e0');R(13,4,1,1,'#2a1a22');
   R(3,-3,3,3,'#ff8a3d');R(9,-3,3,3,'#ff8a3d');R(4,-2,1,2,'#3a2433');R(10,-2,1,2,'#3a2433');
   R(8,2,2,2,'#2a1a22');
-  R(2,6,9,2,'#5fbf8f');R(1,7,2,3,'#5fbf8f');
+  const scarf=p.fire?'#ff5a3d':'#5fbf8f';R(2,6,9,2,scarf);R(1,7,2,3,scarf);
+  if(p.fire&&(time>>2)%3===0)R(-8,5+Math.round(Math.sin(time/8)),2,2,'#ffc857');
   if(p.dbl){ctx.save();ctx.translate(5,-3);ctx.rotate(-.5);ctx.fillStyle='#e8fff6';ctx.fillRect(-1,-5,2,6);ctx.restore()}
   ctx.restore();
 }
@@ -100,6 +114,26 @@ function drawBeetle(e){
   R(x+2,y+10,2,2-l,'#1c3a52');R(x+6,y+10,2,1+l,'#1c3a52');R(x+10,y+10,2,2-l,'#1c3a52');
   R(x+3,y-1,1,2,'#8fb3cc');R(x+10,y-1,1,2,'#8fb3cc');
   ctx.restore();
+}
+function drawHog(e){
+  const x=sn(e.x-camX),y=sn(e.y),d=e.vx<0?-1:1;
+  ctx.save();ctx.translate(x+7,y+11);
+  if(e.flip)ctx.scale(1,-1);ctx.scale(-d,1);ctx.translate(-7,-11); // drawn facing left
+  const l=(time>>3)%2;
+  ctx.fillStyle='#5a3f33';                                   // spiky back
+  for(let i=0;i<5;i++){ctx.beginPath();ctx.moveTo(3+i*2.4,4);ctx.lineTo(4.5+i*2.4,-1+(i%2));ctx.lineTo(6+i*2.4,4);ctx.fill()}
+  ctx.beginPath();ctx.ellipse(8,6,6.5,4.5,0,0,7);ctx.fill();
+  ctx.fillStyle='#7d5a46';for(let i=0;i<4;i++)ctx.fillRect(5+i*2.5,2+(i%2),1,3);
+  R(0,5,5,4,'#e8c9a0');R(-1,6,2,2,'#2a1a22');R(2,5,1,1,'#2a1a22'); // face, nose, eye
+  R(3,10,2,1+l,'#3a2433');R(10,10,2,2-l,'#3a2433');
+  ctx.restore();
+}
+function drawSpark(k){
+  const x=k.x-camX+3,y=k.y+3,r=2.5+Math.sin(k.t/2)*.6;
+  const g=ctx.createRadialGradient(x,y,0,x,y,7);g.addColorStop(0,'rgba(255,170,80,.6)');g.addColorStop(1,'rgba(255,170,80,0)');
+  ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y,7,0,7);ctx.fill();
+  ctx.fillStyle='#ff8a3d';ctx.beginPath();ctx.arc(x,y,r,0,7);ctx.fill();
+  ctx.fillStyle='#fff3c4';ctx.fillRect(x-1,y-1,2,2);
 }
 function drawBat(e){
   const x=e.x-camX,y=e.y,cx=x+7,cy=y+5;
@@ -173,6 +207,7 @@ function drawHud(){
   const y=9;let x=8;
   for(let i=0;i<3;i++){heart(x,y-3,i<lives?'#ff8a3d':'#ffffff26');x+=10}
   if(player&&player.dbl){feather(x+4,y,.8,'#e8fff6');x+=10}
+  if(player&&player.fire){fernFlower(x+4,y+1,.7);x+=11}
   x+=6;gemIcon(x,y-3.5);x+=11;
   hudText(String(gems),x,y,'#ffc857');
   hudText(String(score).padStart(6,'0'),VW/2,y,'#f3ecdf','center');
@@ -189,7 +224,8 @@ function draw(){
   for(let ty=0;ty<H;ty++)for(let tx=c0;tx<=c1&&tx<W;tx++){const c=grid[ty][tx];if(c!=='.')tile(c,tx*T-sn(camX),ty*T,tx,ty)}
   checks.forEach(drawCheck);
   if(LEVELS[lvl].theme==='valley')drawBeacon();else drawHouse();
-  enemies.forEach(e=>{if(e.x>camX-30&&e.x<camX+VW+30)(e.type==='bat'?drawBat:drawBeetle)(e)});
+  enemies.forEach(e=>{if(e.x>camX-30&&e.x<camX+VW+30)(e.type==='bat'?drawBat:e.type==='hog'?drawHog:drawBeetle)(e)});
+  sparks.forEach(drawSpark);
   for(const q of parts){if(q.s){ctx.fillStyle=q.c;ctx.globalAlpha=Math.max(0,1-(q.t-40)/40);ctx.beginPath();ctx.arc(q.x-camX,q.y,q.s,0,7);ctx.fill();ctx.globalAlpha=1}else R(q.x-camX,q.y,6,6,q.c)}
   for(const q of pops){ctx.fillStyle='#ffc857';ctx.font='8px Silkscreen, monospace';ctx.textAlign='center';ctx.fillText(q.txt,q.x-camX,q.y-8-q.t*.6);ctx.textAlign='start'}
   drawFox(player);

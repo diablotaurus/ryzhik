@@ -23,6 +23,8 @@ canvas{background:var(--dusk);display:block;border-radius:4px;box-shadow:0 0 0 2
 .pad div{display:flex;gap:12px}
 .pad button{width:68px;height:60px;border-radius:10px;border:2px solid #fff3;background:#ffffff14;color:var(--ink);font-size:22px;touch-action:none}
 .pad button.on{background:#ff8a3d55;border-color:var(--ember)}
+.pad button.fire{display:none;color:var(--ember);font-size:26px}
+body.has-fire .pad button.fire{display:block}
 @media (pointer:coarse){.pad{display:flex}}
 /* keys hint is useless on touch */
 @media (pointer:coarse){.card .keys{display:none}}

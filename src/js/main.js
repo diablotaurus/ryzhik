@@ -29,6 +29,8 @@ function frame(now){
   accum+=Math.min(100,now-last);last=now;
   if(state==='play'&&shownLvl!==lvl+'/'+lives){shownLvl=lvl+'/'+lives;lvlBanner=time+120}
   while(accum>=1000/60){if(state==='play'||state==='win')update();else time++;accum-=1000/60}
+  const hasFire=!!(player&&player.fire&&state==='play');
+  if(document.body.classList.contains('has-fire')!==hasFire)document.body.classList.toggle('has-fire',hasFire);
   draw();requestAnimationFrame(frame);
 }
 
