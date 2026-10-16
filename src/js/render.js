@@ -5,6 +5,8 @@ const R=(x,y,w,h,c)=>{ctx.fillStyle=c;ctx.fillRect(sn(x),sn(y),w,h)};
 const THEMES={
   valley:{sky:['#1d1a3f','#4a2f63','#b8566b'],grass:['#5fbf8f','#3e8c66','#7fdcab'],dirt:['#6b3f2a','#5a3322'],
     stone:['#8a8fa8','#b3b8cc','#5d6178','#6d7290','#a3a8bf'],spike:'#cfd3e6'},
+  cave:{sky:['#0b0a14','#17142a','#241b38'],grass:['#6b6890','#4f4c6e','#8a87b3'],dirt:['#3a3550','#2d2940'],
+    stone:['#5d6a8a','#7d8bb0','#3e4760','#4b5674','#6f7ca0'],spike:'#a9a3c9'},
   forest:{sky:['#060a1c','#122039','#24465a'],grass:['#3f8f6b','#2a6650','#62b48d'],dirt:['#3b2a24','#2e201b'],
     stone:['#7a5a3c','#a07c54','#4f3826','#5f452e','#8e6c48'],spike:'#9cc49a'}
 };
@@ -30,8 +32,10 @@ function pines(par,base,col,gap,size,seed){
 function drawBg(){
   const t=th(),gr=ctx.createLinearGradient(0,0,0,VH);gr.addColorStop(0,t.sky[0]);gr.addColorStop(.55,t.sky[1]);gr.addColorStop(1,t.sky[2]);
   ctx.fillStyle=gr;ctx.fillRect(0,0,VW,VH);
+  const theme=LEVELS[lvl].theme;
+  if(theme==='cave'){drawCaveBg();return}
   for(let i=0;i<40;i++){const sx=((i*97)%VW - camX*.05+VW*4)%VW,sy=(i*53)%110;R(sx,sy,1,1,i%5?'#ffffff66':'#ffe9b0')}
-  if(LEVELS[lvl].theme==='valley'){
+  if(theme==='valley'){
     moon(411-camX*.03,41,11,false);
     const layer=(par,base,amp,col,step)=>{ctx.fillStyle=col;ctx.beginPath();ctx.moveTo(0,VH);
       for(let x=0;x<=VW;x+=8){const wx=x+camX*par;ctx.lineTo(x,base-Math.abs(Math.sin(wx/step))*amp-Math.sin(wx/(step*.37))*amp*.25)}
@@ -50,10 +54,38 @@ function drawBg(){
     }
   }
 }
+/* cave: rock teeth from above and below in two parallax layers, glowing crystals, drifting motes */
+function rockTeeth(par,col,gap,len,seed,fromTop){
+  ctx.fillStyle=col;const off=camX*par,k0=Math.floor(off/gap)-1;
+  for(let k=k0;k<k0+VW/gap+3;k++){
+    const h=len*(.5+((k*7919+seed)%11)/12),w=gap*(.35+((k*31+seed)%5)/14),sx=k*gap-off+((k*13+seed)%gap)*.3;
+    ctx.beginPath();
+    if(fromTop){ctx.moveTo(sx-w,0);ctx.lineTo(sx,h);ctx.lineTo(sx+w,0)}else{ctx.moveTo(sx-w,VH);ctx.lineTo(sx,VH-h);ctx.lineTo(sx+w,VH)}
+    ctx.fill();
+  }
+}
+function drawCaveBg(){
+  rockTeeth(.1,'#1a1630',38,70,5,true);rockTeeth(.1,'#1a1630',44,80,9,false);
+  // crystal clusters glowing in the back wall
+  const off=camX*.2;
+  for(let k=Math.floor(off/150)-1;k<off/150+5;k++){
+    const cx=k*150-off+((k*53)%70),cy=150+((k*37)%40),hue=k%2?'120,200,255':'200,140,255',a=.5+Math.sin(time/40+k)*.15;
+    const g=ctx.createRadialGradient(cx,cy,0,cx,cy,34);g.addColorStop(0,`rgba(${hue},.25)`);g.addColorStop(1,`rgba(${hue},0)`);
+    ctx.fillStyle=g;ctx.beginPath();ctx.arc(cx,cy,34,0,7);ctx.fill();
+    ctx.fillStyle=`rgba(${hue},${a})`;
+    [[-6,8,3],[0,14,4],[6,10,3]].forEach(([dx,h,w])=>{ctx.beginPath();ctx.moveTo(cx+dx-w,cy+6);ctx.lineTo(cx+dx,cy+6-h);ctx.lineTo(cx+dx+w,cy+6);ctx.fill()});
+  }
+  rockTeeth(.3,'#120f22',52,95,13,true);rockTeeth(.3,'#120f22',60,70,21,false);
+  for(const f of flies){
+    const fx=((f.x-camX*.5+Math.sin(time/90+f.ph)*20)%(VW+40)+VW+40)%(VW+40)-20,fy=f.y+Math.sin(time/60+f.ph*2)*8;
+    ctx.fillStyle=`rgba(170,210,255,${.25+.45*Math.max(0,Math.sin(time/30+f.ph*3))})`;ctx.fillRect(fx,fy,1,1);
+  }
+}
 function tile(c,x,y,tx,ty){
   const t=th();
   if(c==='#'){const top=at(tx,ty-1)!=='#';R(x,y,T,T,t.dirt[0]);R(x+2,y+6,3,3,t.dirt[1]);R(x+10,y+11,3,2,t.dirt[1]);
-    if(top){R(x,y,T,5,t.grass[0]);R(x,y+5,T,1,t.grass[1]);R(x+3,y-1,2,1,t.grass[2]);R(x+11,y-1,2,1,t.grass[2])}}
+    if(LEVELS[lvl].theme==='cave'&&at(tx,ty+1)!=='#'&&ty<H-1){R(x,y+T-3,T,3,'#1e1b2c');if((tx*5)%7===0)R(x+7,y+T,2,2+((time/20+tx)%3|0),'#8fb3cc88')}
+    if(top&&ty>0){R(x,y,T,5,t.grass[0]);R(x,y+5,T,1,t.grass[1]);R(x+3,y-1,2,1,t.grass[2]);R(x+11,y-1,2,1,t.grass[2])}}
   else if(c==='='){const L=at(tx-1,ty)==='=',Rt=at(tx+1,ty)==='=',s=t.stone;
     R(x,y,T,T,s[0]);R(x,y,T,2,s[1]);R(x,y+T-2,T,2,s[2]);
     if(L)R(x,y+2,1,12,s[3]);else R(x,y,1,T-2,s[4]);
@@ -171,6 +203,20 @@ function drawCheck(c){
   if(c.lit)R(x+7,by-26,2,3,'#fff3c4');
   R(x+7,by-28,2,7,'#3a315066');
 }
+/* cave exit: an arch of moonlit night with a cool glow spilling in */
+function drawExit(){
+  const bx=flagX*T-camX;
+  if(bx>VW+80||bx<-80)return;
+  const by=13*T,lit=state==='win'||state==='cleared';
+  const g=ctx.createRadialGradient(bx+8,by-28,4,bx+8,by-28,lit?90:60);g.addColorStop(0,'rgba(150,190,255,.35)');g.addColorStop(1,'rgba(150,190,255,0)');
+  ctx.fillStyle=g;ctx.beginPath();ctx.arc(bx+8,by-28,lit?90:60,0,7);ctx.fill();
+  ctx.save();ctx.beginPath();ctx.moveTo(bx-14,by);ctx.lineTo(bx-14,by-34);ctx.quadraticCurveTo(bx+8,by-70,bx+30,by-34);ctx.lineTo(bx+30,by);ctx.closePath();
+  const sky=ctx.createLinearGradient(0,by-60,0,by);sky.addColorStop(0,'#24465a');sky.addColorStop(1,'#122039');ctx.fillStyle=sky;ctx.fill();ctx.clip();
+  for(let i=0;i<6;i++)R(bx-10+((i*13)%38),by-52+((i*7)%30),1,1,'#ffffffaa');
+  ctx.fillStyle='#0d2030';for(let i=0;i<3;i++){const px=bx-8+i*14;ctx.beginPath();ctx.moveTo(px-7,by);ctx.lineTo(px,by-24-i%2*6);ctx.lineTo(px+7,by);ctx.fill()}
+  ctx.restore();
+  ctx.strokeStyle='#6b6890';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(bx-14,by);ctx.lineTo(bx-14,by-34);ctx.quadraticCurveTo(bx+8,by-70,bx+30,by-34);ctx.lineTo(bx+30,by);ctx.stroke();
+}
 function drawHouse(){
   const bx=flagX*T-camX;
   if(bx>VW+80||bx<-80)return;
@@ -223,7 +269,7 @@ function draw(){
   const c0=Math.floor(camX/T),c1=c0+Math.ceil(VW/T)+1;
   for(let ty=0;ty<H;ty++)for(let tx=c0;tx<=c1&&tx<W;tx++){const c=grid[ty][tx];if(c!=='.')tile(c,tx*T-sn(camX),ty*T,tx,ty)}
   checks.forEach(drawCheck);
-  if(LEVELS[lvl].theme==='valley')drawBeacon();else drawHouse();
+  ({valley:drawBeacon,cave:drawExit,forest:drawHouse})[LEVELS[lvl].theme]();
   enemies.forEach(e=>{if(e.x>camX-30&&e.x<camX+VW+30)(e.type==='bat'?drawBat:e.type==='hog'?drawHog:drawBeetle)(e)});
   sparks.forEach(drawSpark);
   for(const q of parts){if(q.s){ctx.fillStyle=q.c;ctx.globalAlpha=Math.max(0,1-(q.t-40)/40);ctx.beginPath();ctx.arc(q.x-camX,q.y,q.s,0,7);ctx.fill();ctx.globalAlpha=1}else R(q.x-camX,q.y,6,6,q.c)}

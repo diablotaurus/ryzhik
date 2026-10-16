@@ -10,12 +10,13 @@ function start(){
   state='play';ov.hidden=true;document.activeElement&&document.activeElement.blur&&document.activeElement.blur();
 }
 function levelWon(){
+  const w=LEVELS[lvl].win;
   if(lvl<LEVELS.length-1){
     state='cleared';
-    card('Маяк зажжён!',`Свет маяка видно на всю долину. Теперь Рыжику пора домой через ночной лес. Янтарь: ${gems}, очки: ${score}.`,'В лес');
+    card(w.title,`${w.text} Янтарь: ${gems}, очки: ${score}.`,w.btn);
   }else{
     state='done';const rec=score>best;saveBest();
-    card('Рыжик дома!',`Маяк горит, в окошке тепло, Рыжик вернулся домой. Янтарь: ${gems}, очки: ${score}.`,'Ещё раз',rec?'Новый рекорд!':`Рекорд: ${best}`);
+    card(w.title,`${w.text} Янтарь: ${gems}, очки: ${score}.`,'Ещё раз',rec?'Новый рекорд!':`Рекорд: ${best}`);
   }
 }
 function gameOver(){
