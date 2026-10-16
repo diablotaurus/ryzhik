@@ -127,6 +127,9 @@ function update(){
     if(moveX(k))k.t=999;
     moveY(k);if(k.on)k.vy=-3.2;
     if(k.x<camX-20||k.x>camX+VW+20||k.y>H*T)k.t=999;
+    // spikes catch sparks: anything that touches the spike tips (lower 10 px of the tile) fizzles out
+    for(let x=Math.floor(k.x/T);x<=Math.floor((k.x+k.w-1)/T);x++){const ty=Math.floor((k.y+k.h-1)/T);
+      if(k.t<999&&at(x,ty)==='^'&&k.y+k.h>ty*T+6){k.t=999;puff(k.x+3,k.y+2,'#9aa0b8');beep(1800,.12,'sawtooth',.02,300)}}
     for(const e of enemies)if(e.alive&&k.t<999&&hit(k,e)){killEnemy(e,true);k.t=999;puff(k.x+3,k.y+3,'#ffc857')}
     if(k.t===999)for(let i=0;i<3;i++)parts.push({x:k.x+3,y:k.y+3,vx:(i-1)*.8,vy:-1-i*.3,t:50,c:'#ff8a3d',s:1.2});
   }
