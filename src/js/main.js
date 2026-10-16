@@ -32,8 +32,15 @@ function frame(now){
   while(accum>=1000/60){if(state==='play'||state==='win')update();else time++;accum-=1000/60}
   const hasFire=!!(player&&player.fire&&state==='play');
   if(document.body.classList.contains('has-fire')!==hasFire)document.body.classList.toggle('has-fire',hasFire);
+  music.set(state==='play'?LEVELS[lvl].theme:null);
   draw();requestAnimationFrame(frame);
 }
+
+/* tap on the ♪ in the HUD toggles music */
+cv.addEventListener('pointerdown',e=>{
+  const r=cv.getBoundingClientRect(),x=(e.clientX-r.left)/r.width*VW,y=(e.clientY-r.top)/r.height*VH;
+  if(x>=musicBtn.x-4&&x<=musicBtn.x+musicBtn.w+4&&y<=musicBtn.h+4){initAudio();toggleMusic()}
+});
 
 /* ---- scale canvas to fill the available space ---- */
 const stage=document.querySelector('.stage');

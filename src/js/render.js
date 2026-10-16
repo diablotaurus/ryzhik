@@ -259,7 +259,15 @@ function drawHud(){
   hudText(String(score).padStart(6,'0'),VW/2,y,'#f3ecdf','center');
   const w=hudText(String(Math.max(best,score)),VW-8,y,'#5fbf8f','right');
   starIcon(VW-8-w-12,y-4);
-  hudText(`${lvl+1}/${LEVELS.length}`,VW-8-w-26,y,'#f3ecdf','right');
+  const lw=hudText(`${lvl+1}/${LEVELS.length}`,VW-8-w-26,y,'#f3ecdf','right');
+  musicBtn.x=VW-8-w-26-lw-22;noteIcon(musicBtn.x+5,y-4,musicOn);
+}
+const musicBtn={x:0,y:0,w:18,h:18};
+function noteIcon(x,y,on){
+  const c=on?'#f3ecdf':'#ffffff55';
+  R(x+5,y,1,7,c);R(x+6,y,3,1,c);R(x+8,y+1,1,1,c);
+  ctx.fillStyle=c;ctx.beginPath();ctx.ellipse(x+3.5,y+7.5,2,1.5,-.4,0,7);ctx.fill();
+  if(!on){ctx.strokeStyle='#ff8a3d';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(x,y+9);ctx.lineTo(x+9,y);ctx.stroke()}
 }
 
 let lvlBanner=0;

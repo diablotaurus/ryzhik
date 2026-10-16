@@ -10,6 +10,7 @@ addEventListener('keydown',e=>{
   if(!keys[e.code]&&(e.code==='Space'||e.code==='ArrowUp'||e.code==='KeyW'||e.code==='KeyZ'))player&&(player.buf=8);
   if(!keys[e.code]&&(e.code==='KeyC'||e.code==='KeyF'||e.code==='KeyJ'))fireReq=true;
   keys[e.code]=true;
+  if(e.code==='KeyM'&&!e.repeat)toggleMusic();
   if((e.code==='Space'||e.code==='Enter')&&canStart())start();
 });
 addEventListener('keyup',e=>keys[e.code]=false);
