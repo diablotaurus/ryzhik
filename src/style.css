@@ -24,6 +24,27 @@ canvas{background:var(--dusk);display:block;border-radius:4px;box-shadow:0 0 0 2
 .pad button{width:68px;height:60px;border-radius:10px;border:2px solid #fff3;background:#ffffff14;color:var(--ink);font-size:22px;touch-action:none}
 .pad button.on{background:#ff8a3d55;border-color:var(--ember)}
 @media (pointer:coarse){.pad{display:flex}}
-/* phone in landscape: little height — compact card, keys hint is useless on touch */
+/* keys hint is useless on touch */
 @media (pointer:coarse){.card .keys{display:none}}
 @media (max-height:420px){.card{padding:12px 16px;gap:8px}.card p{font-size:13px;line-height:1.4}}
+
+/* phone in landscape: game takes the whole height, translucent pad floats over the bottom corners */
+@media (pointer:coarse) and (orientation:landscape){
+  body{padding:0 max(8px,env(safe-area-inset-right,0px)) 0 max(8px,env(safe-area-inset-left,0px))}
+  .pad{position:fixed;left:max(14px,env(safe-area-inset-left,0px));right:max(14px,env(safe-area-inset-right,0px));
+    bottom:max(14px,env(safe-area-inset-bottom,0px));padding:0;pointer-events:none;z-index:2}
+  .pad button{pointer-events:auto;width:64px;height:56px;background:#14142859;border-color:#fff4;color:#f3ecdfcc;
+    -webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px)}
+  .pad button.on{background:#ff8a3d66}
+}
+
+/* phone in portrait: the level is wide and low, so suggest turning the phone (the game still works) */
+.rotate{display:none}
+@media (pointer:coarse) and (orientation:portrait){
+  /* sits just above the canvas: canvas is width-limited here, its half-height = (100vw - gutters) * 240/512 / 2 */
+  .rotate{display:flex;position:absolute;left:0;right:0;bottom:calc(50% + (100vw - 32px) * .234 + 28px);
+    align-items:center;justify-content:center;gap:12px;font-size:15px;opacity:.85;text-align:left}
+  .rotate svg{flex:none;animation:tilt 2.4s ease-in-out infinite}
+}
+@keyframes tilt{0%,25%{transform:rotate(0)}50%,85%{transform:rotate(-90deg)}100%{transform:rotate(0)}}
+@media (prefers-reduced-motion:reduce){.rotate svg{animation:none;transform:rotate(-90deg)}}
