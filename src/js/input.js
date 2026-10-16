@@ -23,6 +23,8 @@ addEventListener('keyup',e=>keys[e.code]=false);
 // iOS Safari ignores user-scalable=no for pinch and still zooms on a quick double tap — block those gestures
 ['gesturestart','gesturechange','gestureend','dblclick'].forEach(t=>document.addEventListener(t,e=>e.preventDefault(),{passive:false}));
 document.addEventListener('touchstart',e=>{if(e.touches.length>1)e.preventDefault()},{passive:false});
+// the pinch itself arrives as touchmove (iOS reports e.scale≠1); only a one-finger drag inside the menu card may scroll
+document.addEventListener('touchmove',e=>{if(e.touches.length>1||(e.scale&&e.scale!==1)||!e.target.closest('.card'))e.preventDefault()},{passive:false});
 let lastTouchEnd=0;
 document.addEventListener('touchend',e=>{const now=Date.now();if(now-lastTouchEnd<350&&!e.target.closest('.btn'))e.preventDefault();lastTouchEnd=now},{passive:false});
 const left=()=>keys.ArrowLeft||keys.KeyA||touch.l, right=()=>keys.ArrowRight||keys.KeyD||touch.r;

@@ -24,6 +24,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Build
+        env:
+          TZ: Europe/Moscow   # build stamp in the menu shows local time
         run: |
           node tools/build.js
           mkdir -p _site
