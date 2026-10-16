@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Рыжик и маяк</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=Rubik:wght@400;600&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="stage">
+  <canvas id="c" width="512" height="240"></canvas>
+  <div class="overlay" id="ov">
+    <div class="card">
+      <h1>Рыжик и маяк</h1>
+      <p>Лисёнок Рыжик должен зажечь маяк на краю долины, а потом вернуться домой через ночной лес. Прыгай на жуков и летучих мышей сверху, разбивай ящики головой, собирай янтарь.</p>
+      <p>Ищи блок с пером: с ним можно прыгнуть второй раз прямо в воздухе.</p>
+      <p class="keys"><kbd>←</kbd> <kbd>→</kbd> бег, <kbd>Пробел</kbd> или <kbd>↑</kbd> прыжок, держи дольше — прыгнешь выше. <kbd>Shift</kbd> ускорение.</p>
+      <p class="rec" id="menuRec"></p>
+      <button class="btn" id="go">Играть</button>
+    </div>
+  </div>
+</div>
+<div class="pad">
+  <div><button id="bl" aria-label="Влево">◀</button><button id="br" aria-label="Вправо">▶</button></div>
+  <div><button id="bj" aria-label="Прыжок">▲</button></div>
+</div>
+
+<!-- Обычные (не модульные) скрипты: игра открывается и с file://. Порядок важен. -->
+<script src="js/levels.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/input.js"></script>
+<script src="js/game.js"></script>
+<script src="js/render.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
