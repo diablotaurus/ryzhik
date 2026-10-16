@@ -5,6 +5,9 @@
   color-scheme:dark;
 }
 html,body{height:100%;margin:0}
+/* it's a game screen: no double-tap / pinch zoom, no pull-to-refresh or rubber-band scrolling */
+html,body{touch-action:none;overscroll-behavior:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
+.card{touch-action:pan-y}
 [hidden]{display:none!important}
 body{background:var(--night);color:var(--ink);font-family:var(--body);display:flex;flex-direction:column;
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));

@@ -20,6 +20,11 @@ addEventListener('keyup',e=>keys[e.code]=false);
   const off=e=>{e.preventDefault();touch[k]=false;b.classList.remove('on')};
   b.addEventListener('pointerdown',on);b.addEventListener('pointerup',off);b.addEventListener('pointercancel',off);b.addEventListener('pointerleave',off);
 });
+// iOS Safari ignores user-scalable=no for pinch and still zooms on a quick double tap — block those gestures
+['gesturestart','gesturechange','gestureend','dblclick'].forEach(t=>document.addEventListener(t,e=>e.preventDefault(),{passive:false}));
+document.addEventListener('touchstart',e=>{if(e.touches.length>1)e.preventDefault()},{passive:false});
+let lastTouchEnd=0;
+document.addEventListener('touchend',e=>{const now=Date.now();if(now-lastTouchEnd<350&&!e.target.closest('.btn'))e.preventDefault();lastTouchEnd=now},{passive:false});
 const left=()=>keys.ArrowLeft||keys.KeyA||touch.l, right=()=>keys.ArrowRight||keys.KeyD||touch.r;
 const jumpHeld=()=>keys.Space||keys.ArrowUp||keys.KeyW||keys.KeyZ||touch.j;
 const run=()=>keys.ShiftLeft||keys.ShiftRight||keys.KeyX;
