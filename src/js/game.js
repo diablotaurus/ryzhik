@@ -10,13 +10,14 @@ function saveBest(){if(score>best){best=score;try{localStorage.setItem('ryzhik-b
 /* ---- level loading: ASCII map -> tile grid + objects ---- */
 function parseLevel(L){
   if(L.map.length!==H)throw new Error(`Уровень «${L.name}»: нужно ${H} строк, а их ${L.map.length}`);
-  const w=L.map[0].length,out={grid:[],beetles:[],hogs:[],bats:[],checks:[],start:[3,12],flag:w-14};
+  const w=L.map[0].length,out={grid:[],beetles:[],hogs:[],bats:[],crows:[],checks:[],start:[3,12],flag:w-14};
   L.map.forEach((row,y)=>{
     if(row.length!==w)throw new Error(`Уровень «${L.name}», строка ${y+1}: длина ${row.length}, а должна быть ${w}`);
     out.grid.push([...row].map((c,x)=>{
       if(c==='b'){out.beetles.push([x,y]);return '.'}
       if(c==='v'){out.bats.push([x,y]);return '.'}
       if(c==='e'){out.hogs.push([x,y]);return '.'}
+      if(c==='c'){out.crows.push([x,y]);return '.'}
       if(c==='@'){out.start=[x,y];return '.'}
       if(c==='!'){out.flag=x;return '.'}
       if(c==='k'){out.checks.push([x,y]);return '.'}
@@ -44,6 +45,7 @@ function spawn(dbl){
   sparks=[];
   enemies=level.beetles.map(([x,y])=>({type:'beetle',x:x*T+1,y:(y+1)*T-12,w:14,h:12,vx:-0.55,alive:true,squash:0}));
   level.hogs.forEach(([x,y])=>enemies.push({type:'hog',x:x*T+1,y:(y+1)*T-11,w:14,h:11,vx:-0.4,alive:true,squash:0}));
+  level.crows.forEach(([x,y])=>enemies.push({type:'crow',x:x*T+1,y:y*T+4,x0:x*T+1,y0:y*T+4,w:14,h:10,vx:0,vy:0,alive:true,squash:0,mode:'perch',t:0,face:-1}));
   level.bats.forEach(([x,y])=>enemies.push({type:'bat',x:x*T,x0:x*T,y:y*T,y0:y*T,w:14,h:10,vx:-0.7,alive:true,squash:0,ph:x}));
   // don't drop an enemy right on top of the respawn point
   enemies=enemies.filter(e=>Math.abs(e.x-player.x)>3*T);
@@ -95,6 +97,23 @@ function shoot(){
   const p=player;if(!p.fire||p.dead||p.cool>0||sparks.length>=2)return;
   p.cool=14;sparks.push({x:p.x+(p.face>0?p.w:-6),y:p.y+4,w:6,h:6,vx:4.2*p.face,vy:1,t:0});
   beep(880,.06,'square',.035,440);
+}
+/* crow: sits on a branch; when Ryzhik passes below it caws, then dives at where he was and flies back */
+function crowAI(e,p){
+  e.t++;
+  const cx=e.x+7,cy=e.y+5,px=p.x+6,py=p.y+7;
+  if(e.mode==='perch'){
+    if(e.t>0&&!p.dead&&Math.abs(px-cx)<88&&py>cy+24){e.mode='alert';e.t=0;e.face=px<cx?-1:1;beep(240,.09,'square',.05,180);setTimeout(()=>beep(220,.12,'square',.05,150),110)}
+  }else if(e.mode==='alert'){
+    if(e.t>=22){e.mode='dive';e.t=0;const dx=px+p.vx*10-cx,dy=py-cy,d=Math.hypot(dx,dy)||1;e.vx=dx/d*3.3;e.vy=dy/d*3.3;e.ty=py;e.face=e.vx<0?-1:1}
+  }else if(e.mode==='dive'){
+    e.x+=e.vx;e.y+=e.vy;
+    if(e.y+5>=e.ty||e.y>11*T||e.t>70){e.mode='rise';e.t=0;e.vy=-2}
+  }else if(e.mode==='rise'){ // climb back up, then glide home to the branch
+    e.x+=e.vx*.45;e.y+=e.vy;
+    if(e.y<=e.y0){e.y=e.y0;const dx=e.x0-e.x;e.x+=Math.sign(dx)*Math.min(Math.abs(dx),1.6);e.face=dx<0?-1:1;
+      if(Math.abs(dx)<1){e.x=e.x0;e.mode='perch';e.t=-120}}
+  }
 }
 function die(){
   if(player.dead)return;player.dead=1;player.vy=-6;player.vx=0;beep(392,.5,'triangle',.07,98);
@@ -154,7 +173,8 @@ function update(){
   for(const e of enemies){
     if(!e.alive){if(e.flip){e.vy+=.3;e.y+=e.vy}else e.squash++;continue}
     if(e.x>camX+VW+40)continue;
-    if(e.type==='bat'){
+    if(e.type==='crow'){crowAI(e,p)}
+    else if(e.type==='bat'){
       e.x+=e.vx;if(Math.abs(e.x-e.x0)>70)e.vx=-e.vx;
       e.y=e.y0+Math.sin((time+e.ph*20)/22)*14;
     }else{

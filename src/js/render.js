@@ -167,6 +167,27 @@ function drawSpark(k){
   ctx.fillStyle='#ff8a3d';ctx.beginPath();ctx.arc(x,y,r,0,7);ctx.fill();
   ctx.fillStyle='#fff3c4';ctx.fillRect(x-1,y-1,2,2);
 }
+function drawCrow(e){
+  const x=e.x-camX,y=e.y,cx=x+7,cy=y+5,f=e.face||-1;
+  if(e.mode==='perch'||e.mode==='alert'||!e.alive&&e.vy===0){R(e.x0-camX-4,e.y0+11,22,2,'#6b4a3a');R(e.x0-camX+14,e.y0+9,2,2,'#6b4a3a');R(e.x0-camX+15,e.y0+8,3,1,'#3f8f6b')} // branch with a leaf
+  ctx.save();ctx.translate(cx,cy);if(!e.alive)ctx.scale(1,-1);ctx.scale(-f*1.15,1.15); // drawn facing left, a bit larger
+  const flying=e.mode==='dive'||e.mode==='rise',flap=flying?Math.sin(time/2.5):0,shake=e.mode==='alert'?((time>>1)%2):0;
+  // silhouette first in a light rim colour, then the body 1 px smaller: reads well on any night sky
+  const shape=grow=>{
+    ctx.beginPath();ctx.ellipse(1,1,6+grow,4+grow,0,0,7);ctx.fill();
+    ctx.beginPath();ctx.moveTo(5,0-grow);ctx.lineTo(10+grow,-2+shake-grow);ctx.lineTo(9+grow,3+grow);ctx.fill();
+    ctx.beginPath();ctx.arc(-4,-2,3.2+grow,0,7);ctx.fill();
+    if(flying){ctx.beginPath();ctx.moveTo(-1-grow,0);ctx.lineTo(3,-8*flap-1-grow);ctx.lineTo(6+grow,0);ctx.fill()}
+  };
+  ctx.fillStyle='#8f8ab8';shape(1);
+  ctx.fillStyle='#2e2945';shape(0);
+  ctx.fillStyle='#e0a040';ctx.beginPath();ctx.moveTo(-6.5,-2.5);ctx.lineTo(-10.5,-1);ctx.lineTo(-6.5,-.3);ctx.fill(); // beak
+  R(-5,-3,1.5,1.5,e.mode==='alert'||e.mode==='dive'?'#ff5a3d':'#ffc857');      // eye
+  ctx.fillStyle='#4a4468';                                                      // wing
+  if(flying){ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(3,-8*flap);ctx.lineTo(5,0);ctx.fill()}
+  else{ctx.beginPath();ctx.ellipse(2,0,4,2.4,-.2,0,7);ctx.fill();R(-2,5,1,2,'#e0a040');R(2,5,1,2,'#e0a040')}
+  ctx.restore();
+}
 function drawBat(e){
   const x=e.x-camX,y=e.y,cx=x+7,cy=y+5;
   ctx.save();if(!e.alive){ctx.translate(cx,cy);ctx.scale(1,-1);ctx.translate(-cx,-cy)}
@@ -279,7 +300,7 @@ function draw(){
   for(let ty=0;ty<H;ty++)for(let tx=c0;tx<=c1&&tx<W;tx++){const c=grid[ty][tx];if(c!=='.')tile(c,tx*T-sn(camX),ty*T,tx,ty)}
   checks.forEach(drawCheck);
   ({valley:drawBeacon,cave:drawExit,forest:drawHouse})[LEVELS[lvl].theme]();
-  enemies.forEach(e=>{if(e.x>camX-30&&e.x<camX+VW+30)(e.type==='bat'?drawBat:e.type==='hog'?drawHog:drawBeetle)(e)});
+  enemies.forEach(e=>{if(e.x>camX-30&&e.x<camX+VW+30)({bat:drawBat,hog:drawHog,crow:drawCrow,beetle:drawBeetle})[e.type](e)});
   sparks.forEach(drawSpark);
   for(const q of parts){if(q.s){ctx.fillStyle=q.c;ctx.globalAlpha=Math.max(0,1-(q.t-40)/40);ctx.beginPath();ctx.arc(q.x-camX,q.y,q.s,0,7);ctx.fill();ctx.globalAlpha=1}else R(q.x-camX,q.y,6,6,q.c)}
   for(const q of pops){ctx.fillStyle='#ffc857';ctx.font='8px Silkscreen, monospace';ctx.textAlign='center';ctx.fillText(q.txt,q.x-camX,q.y-8-q.t*.6);ctx.textAlign='start'}
