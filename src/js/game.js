@@ -1,6 +1,6 @@
 /* ---- game state, level loading, physics, rules ---- */
 const T=16,VW=512,VH=240,H=15;
-let W,level,checks,respawnAt,grid,player,enemies,sparks,parts,pops,flies,camX,state='menu',gems=0,score=0,lives=3,time=0,flagX=0,winT=0,lvl=0;
+let W,gems0=0,score0=0,level,checks,respawnAt,grid,player,enemies,sparks,parts,pops,flies,camX,state='menu',gems=0,score=0,lives=3,time=0,flagX=0,winT=0,lvl=0;
 
 /* ---- record ---- */
 let best=0;
@@ -28,6 +28,7 @@ function parseLevel(L){
 
 function reset(full){
   if(full){gems=0;score=0;lives=3;lvl=0;}
+  gems0=gems;score0=score;
   level=parseLevel(LEVELS[lvl]);
   grid=level.grid;W=grid[0].length;flagX=level.flag;
   checks=level.checks.map(([x,y])=>({x,y,lit:false,t:0}));

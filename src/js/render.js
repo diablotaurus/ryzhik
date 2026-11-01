@@ -261,8 +261,9 @@ function drawHud(){
   starIcon(VW-8-w-12,y-4);
   const lw=hudText(`${lvl+1}/${LEVELS.length}`,VW-8-w-26,y,'#f3ecdf','right');
   musicBtn.x=VW-8-w-26-lw-22;noteIcon(musicBtn.x+5,y-4,musicOn);
+  pauseBtn.x=musicBtn.x-20;R(pauseBtn.x+6,y-4,2,8,'#f3ecdf');R(pauseBtn.x+10,y-4,2,8,'#f3ecdf');
 }
-const musicBtn={x:0,y:0,w:18,h:18};
+const musicBtn={x:0,y:0,w:18,h:18},pauseBtn={x:0,y:0,w:18,h:18};
 function noteIcon(x,y,on){
   const c=on?'#f3ecdf':'#ffffff55';
   R(x+5,y,1,7,c);R(x+6,y,3,1,c);R(x+8,y+1,1,1,c);
