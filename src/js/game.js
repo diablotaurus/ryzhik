@@ -52,7 +52,7 @@ function spawn(dbl){
   parts=[];pops=[];
   camX=Math.max(0,Math.min(player.x-VW*.4,W*T-VW));
 }
-const solid=c=>c==='#'||c==='='||c==='B'||c==='G'||c==='P'||c==='u';
+const solid=c=>c==='#'||c==='='||c==='B'||c==='G'||c==='P'||c==='u'||c==='i';
 const at=(tx,ty)=>(tx<0||tx>=W)?'#':(ty<0||ty>=H)?'.':grid[ty][tx];
 /* a floating stone ledge (nothing solid under it) is one-way: you jump up through it and land on top.
    Stairs and pillars that stand on something stay solid from every side. */
@@ -129,10 +129,13 @@ function update(){
     if(lives<=0)gameOver();
     else spawn(p.dbl)}return}
 
-  const max=run()?3.1:2.0, acc=p.on?.16:.11;
+  // on ice Ryzhik picks up speed slowly and slides a long way before stopping
+  const ice=p.on&&(at(Math.floor(p.x/T),Math.floor((p.y+p.h+1)/T))==='i'||at(Math.floor((p.x+p.w-1)/T),Math.floor((p.y+p.h+1)/T))==='i');
+  const max=run()?3.1:2.0, acc=ice?.05:p.on?.16:.11;
   if(left()){p.vx=Math.max(p.vx-acc,-max);p.face=-1}
   else if(right()){p.vx=Math.min(p.vx+acc,max);p.face=1}
-  else{p.vx*=p.on?.8:.95;if(Math.abs(p.vx)<.05)p.vx=0}
+  else{p.vx*=ice?.985:p.on?.8:.95;if(Math.abs(p.vx)<.05)p.vx=0}
+  if(ice&&Math.abs(p.vx)>1.2&&time%6===0)parts.push({x:p.x+6-p.vx*2,y:p.y+p.h,vx:-p.vx*.2,vy:-.4,t:52,c:'#e8f4ff',s:1})
   if(p.on){p.coy=6;p.usedDbl=false}else p.coy--;
   if(p.buf>0)p.buf--;
   if(p.buf>0&&p.coy>0){p.vy=-6.4-Math.abs(p.vx)*.25;p.buf=0;p.coy=0;beep(330,.12,'square',.04,660)}
