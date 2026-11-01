@@ -97,3 +97,5 @@ if(window.ResizeObserver)new ResizeObserver(fit).observe(stage);
 addEventListener('resize',fit);fit();
 reset(true);
 requestAnimationFrame(frame);
+// offline: after the first visit the game opens without internet too (sw.js; a service worker needs http(s), not file://)
+if('serviceWorker' in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('sw.js').catch(()=>{});

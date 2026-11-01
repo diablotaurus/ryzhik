@@ -16,4 +16,5 @@ html=html.replace('<!--BUILD-->dev',`${pad(now.getDate())}.${pad(now.getMonth()+
 fs.mkdirSync(dist,{recursive:true});
 const out=path.join(dist,'ryzhik.html');
 fs.writeFileSync(out,html);
+fs.copyFileSync(path.join(src,'sw.js'),path.join(dist,'sw.js'));   // offline mode, served next to the page
 console.log(`dist/ryzhik.html — ${(html.length/1024).toFixed(1)} KB`);

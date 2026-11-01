@@ -30,6 +30,7 @@ jobs:
           node tools/build.js
           mkdir -p _site
           cp dist/ryzhik.html _site/index.html
+          cp dist/sw.js _site/sw.js
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
