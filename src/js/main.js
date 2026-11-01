@@ -8,32 +8,57 @@ function card(title,text,btn,rec,extra=[]){
   ov.hidden=false;$('go').onclick=start;extra.forEach((b,i)=>$('x'+i).onclick=b.fn);
 }
 $('go').onclick=start;
+const unfocus=()=>document.activeElement&&document.activeElement.blur&&document.activeElement.blur();
+const starStr=n=>'★'.repeat(n)+(n<3?`<span class="off">${'☆'.repeat(3-n)}</span>`:'');
 function start(){
   initAudio();
-  if(state==='pause'){state='play';ov.hidden=true;document.activeElement&&document.activeElement.blur&&document.activeElement.blur();return}
-  if(state==='cleared'){lvl++;reset(false);}
-  else if(state!=='play')reset(true);
-  state='play';ov.hidden=true;document.activeElement&&document.activeElement.blur&&document.activeElement.blur();
+  if(state==='pause'){state='play';ov.hidden=true;unfocus();return}
+  if(state==='cleared'){lvl++;reset(false)}
+  else if(state==='map'){lvl=Math.min(save.open,LEVELS.length-1);reset(true)}  // Enter on the map: furthest open level
+  else if(state==='over')reset(true);                                           // same level, fresh lives
+  else if(state!=='play'){showMap();return}
+  state='play';ov.hidden=true;unfocus();
 }
+function playLevel(i){initAudio();lvl=i;reset(true);state='play';ov.hidden=true;unfocus()}
+/* world map: the way home as a trail of levels; locked ones open as you clear the previous */
+function showMap(){
+  state='map';
+  const total=save.stars.reduce((a,b)=>a+(b||0),0);
+  const nodes=LEVELS.map((L,i)=>{
+    const open=i<=save.open;
+    return `<button class="node ${L.theme}" data-i="${i}"${open?'':' disabled'}><b>${i+1}</b><span>${L.name}</span>`+
+      `<i>${open?starStr(save.stars[i]||0):'закрыто'}</i></button>`;
+  }).join('');
+  ov.innerHTML=`<div class="card map"><h1>Путь домой</h1><div class="trail">${nodes}</div>`+
+    `<p class="rec">Звёзды: ${total} из ${LEVELS.length*3}${best?` · рекорд ${best}`:''}</p>`+
+    `<p class="hint">★ пройти уровень · ★ собрать весь янтарь · ★ не потерять ни одной жизни</p></div>`;
+  ov.hidden=false;
+  ov.querySelectorAll('.node:not([disabled])').forEach(b=>b.onclick=()=>playLevel(+b.dataset.i));
+  const next=ov.querySelector(`.node[data-i="${Math.min(save.open,LEVELS.length-1)}"]`);next&&next.focus();
+}
+const toMap={label:'Карта',fn:showMap};
 function levelWon(){
-  const w=LEVELS[lvl].win;
+  const w=LEVELS[lvl].win,got=levelStars(),n=got.filter(Boolean).length;
+  save.stars[lvl]=Math.max(save.stars[lvl]||0,n);save.open=Math.max(save.open,Math.min(lvl+1,LEVELS.length-1));storeSave();
+  const why=n<3?' '+[!got[1]&&`Янтаря ${gems-gems0} из ${level.amber}.`,!got[2]&&'Без потерь — ещё звезда.'].filter(Boolean).join(' '):'';
+  const text=`${w.text} Янтарь: ${gems}, очки: ${score}.${why}`;
   if(lvl<LEVELS.length-1){
     state='cleared';
-    card(w.title,`${w.text} Янтарь: ${gems}, очки: ${score}.`,w.btn);
+    card(w.title,text,w.btn,`<span class="stars">${starStr(n)}</span>`,[toMap]);
   }else{
     state='done';const rec=score>best;saveBest();
-    card(w.title,`${w.text} Янтарь: ${gems}, очки: ${score}.`,'Ещё раз',rec?'Новый рекорд!':`Рекорд: ${best}`);
+    card(w.title,text,'Карта',`<span class="stars">${starStr(n)}</span><br>${rec?'Новый рекорд!':`Рекорд: ${best}`}`);
   }
 }
 function pause(){
   if(state!=='play')return;
   state='pause';
   card('Пауза','Рыжик присел отдохнуть. Можно продолжить или начать уровень заново.','Продолжить',null,
-    [{label:'Уровень заново',fn:()=>{gems=gems0;score=score0;reset(false);state='play';ov.hidden=true}}]);
+    [{label:'Уровень заново',fn:()=>{gems=gems0;score=score0;reset(false);state='play';ov.hidden=true}},toMap]);
 }
 function gameOver(){
   state='over';const rec=score>best;saveBest();
-  card('Конец игры',`Очки: ${score}. Попробуй ещё раз, маяк ждёт.`,'Заново',rec?'Новый рекорд!':`Рекорд: ${best}`);
+  card('Конец игры',`Очки: ${score}. Попробуй ещё раз, маяк ждёт.`,'Заново',rec?'Новый рекорд!':`Рекорд: ${best}`,[toMap]);
 }
 
 /* ---- loop with fixed step ---- */

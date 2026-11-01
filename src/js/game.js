@@ -1,16 +1,22 @@
 /* ---- game state, level loading, physics, rules ---- */
 const T=16,VW=512,VH=240,H=15;
-let W,boss=null,gems0=0,score0=0,level,checks,respawnAt,grid,player,enemies,sparks,parts,pops,flies,camX,state='menu',gems=0,score=0,lives=3,time=0,flagX=0,winT=0,lvl=0;
+let W,boss=null,falls=0,gems0=0,score0=0,level,checks,respawnAt,grid,player,enemies,sparks,parts,pops,flies,camX,state='menu',gems=0,score=0,lives=3,time=0,flagX=0,winT=0,lvl=0;
 
 /* ---- record ---- */
 let best=0;
 try{best=parseInt(localStorage.getItem('ryzhik-best'))||0}catch(e){}
+/* level progress: which levels are open and the best stars on each */
+const save={open:0,stars:[]};
+try{Object.assign(save,JSON.parse(localStorage.getItem('ryzhik-save'))||{})}catch(e){}
+function storeSave(){try{localStorage.setItem('ryzhik-save',JSON.stringify(save))}catch(e){}}
+// ★ level cleared · ★ all amber (loose and in amber blocks) · ★ no lives lost on this level
+function levelStars(){return [true,gems-gems0>=level.amber,falls===0]}
 function saveBest(){if(score>best){best=score;try{localStorage.setItem('ryzhik-best',best)}catch(e){}}}
 
 /* ---- level loading: ASCII map -> tile grid + objects ---- */
 function parseLevel(L){
   if(L.map.length!==H)throw new Error(`Уровень «${L.name}»: нужно ${H} строк, а их ${L.map.length}`);
-  const w=L.map[0].length,out={grid:[],beetles:[],hogs:[],bats:[],crows:[],checks:[],start:[3,12],flag:w-14};
+  const w=L.map[0].length,out={grid:[],beetles:[],hogs:[],bats:[],crows:[],checks:[],start:[3,12],flag:w-14,amber:0};
   L.map.forEach((row,y)=>{
     if(row.length!==w)throw new Error(`Уровень «${L.name}», строка ${y+1}: длина ${row.length}, а должна быть ${w}`);
     out.grid.push([...row].map((c,x)=>{
@@ -22,6 +28,7 @@ function parseLevel(L){
       if(c==='@'){out.start=[x,y];return '.'}
       if(c==='!'){out.flag=x;return '.'}
       if(c==='k'){out.checks.push([x,y]);return '.'}
+      if(c==='o'||c==='G')out.amber++;
       return c;
     }));
   });
@@ -29,8 +36,8 @@ function parseLevel(L){
 }
 
 function reset(full){
-  if(full){gems=0;score=0;lives=3;lvl=0;}
-  gems0=gems;score0=score;
+  if(full){gems=0;score=0;lives=3;}
+  gems0=gems;score0=score;falls=0;
   level=parseLevel(LEVELS[lvl]);
   grid=level.grid;W=grid[0].length;flagX=level.flag;
   checks=level.checks.map(([x,y])=>({x,y,lit:false,t:0}));
@@ -166,7 +173,7 @@ function update(){
   time++;
   const p=player;
   if(state==='win'){winT++;p.vx=0;p.vy=Math.min(p.vy+.3,3);moveY(p);if(winT===150)levelWon();return}
-  if(p.dead){p.dead++;p.vy+=.35;p.y+=p.vy;if(p.dead>110){lives--;
+  if(p.dead){p.dead++;p.vy+=.35;p.y+=p.vy;if(p.dead>110){lives--;falls++;
     if(lives<=0)gameOver();
     else spawn(p.dbl)}return}
 
