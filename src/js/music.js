@@ -11,6 +11,9 @@ const TRACKS={
   snow:{bpm:92,leadType:'triangle',
     lead:'F#5 . E5 D5 A4 . . . | B4 . D5 E5 F#5 . . - | A5 . F#5 E5 D5 . B4 . | A4 . B4 D5 E5 . . -',
     bass:'D3 . . . A2 . . . | G2 . . . D3 . . . | B2 . . . F#2 . . . | G2 . . . A2 . . .'},
+  boss:{bpm:138,
+    lead:'E5 . E5 G5 . E5 D5 . | C5 . C5 E5 . C5 B4 . | E5 . E5 G5 . A5 G5 . | F#5 . D#5 . B4 . . -',
+    bass:'E2 . E3 . E2 . E3 . | C2 . C3 . C2 . C3 . | A2 . A3 . A2 . A3 . | B2 . B3 . B2 . B3 .'},
   forest:{bpm:100,
     lead:'E5 . D5 B4 . . G4 . | A4 . B4 D5 . . - - | E5 . D5 B4 . . A4 . | G4 . A4 B4 . . - -',
     bass:'E2 . . . B2 . . . | D3 . . . A2 . . . | C3 . . . G2 . . . | B2 . . . B2 . . .'}

@@ -44,7 +44,7 @@ function frame(now){
   while(accum>=1000/60){if(state==='play'||state==='win')update();else time++;accum-=1000/60}
   const hasFire=!!(player&&player.fire&&state==='play');
   if(document.body.classList.contains('has-fire')!==hasFire)document.body.classList.toggle('has-fire',hasFire);
-  music.set(state==='play'?LEVELS[lvl].theme:null);
+  music.set(state==='play'?(bossActive()&&boss.mode!=='leave'?'boss':LEVELS[lvl].theme):null);
   draw();requestAnimationFrame(frame);
 }
 

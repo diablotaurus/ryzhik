@@ -1,6 +1,6 @@
 /* ---- game state, level loading, physics, rules ---- */
 const T=16,VW=512,VH=240,H=15;
-let W,gems0=0,score0=0,level,checks,respawnAt,grid,player,enemies,sparks,parts,pops,flies,camX,state='menu',gems=0,score=0,lives=3,time=0,flagX=0,winT=0,lvl=0;
+let W,boss=null,gems0=0,score0=0,level,checks,respawnAt,grid,player,enemies,sparks,parts,pops,flies,camX,state='menu',gems=0,score=0,lives=3,time=0,flagX=0,winT=0,lvl=0;
 
 /* ---- record ---- */
 let best=0;
@@ -18,6 +18,7 @@ function parseLevel(L){
       if(c==='v'){out.bats.push([x,y]);return '.'}
       if(c==='e'){out.hogs.push([x,y]);return '.'}
       if(c==='c'){out.crows.push([x,y]);return '.'}
+      if(c==='O'){out.boss=[x,y];return '.'}
       if(c==='@'){out.start=[x,y];return '.'}
       if(c==='!'){out.flag=x;return '.'}
       if(c==='k'){out.checks.push([x,y]);return '.'}
@@ -47,6 +48,7 @@ function spawn(dbl){
   level.hogs.forEach(([x,y])=>enemies.push({type:'hog',x:x*T+1,y:(y+1)*T-11,w:14,h:11,vx:-0.4,alive:true,squash:0}));
   level.crows.forEach(([x,y])=>enemies.push({type:'crow',x:x*T+1,y:y*T+4,x0:x*T+1,y0:y*T+4,w:14,h:10,vx:0,vy:0,alive:true,squash:0,mode:'perch',t:0,face:-1}));
   level.bats.forEach(([x,y])=>enemies.push({type:'bat',x:x*T,x0:x*T,y:y*T,y0:y*T,w:14,h:10,vx:-0.7,alive:true,squash:0,ph:x}));
+  boss=level.boss?makeBoss(...level.boss):null;
   // don't drop an enemy right on top of the respawn point
   enemies=enemies.filter(e=>Math.abs(e.x-player.x)>3*T);
   parts=[];pops=[];
@@ -114,6 +116,45 @@ function crowAI(e,p){
     if(e.y<=e.y0){e.y=e.y0;const dx=e.x0-e.x;e.x+=Math.sign(dx)*Math.min(Math.abs(dx),1.6);e.face=dx<0?-1:1;
       if(Math.abs(dx)<1){e.x=e.x0;e.mode='perch';e.t=-120}}
   }
+}
+/* ---- boss: the eagle-owl guarding the way home ----
+   wait (on a branch) → intro (hoots) → hover ⇄ warn → swoop (U-shaped dive at Ryzhik) … hp 0 → leave */
+const BOSS_HP=6;
+function makeBoss(tx,ty){
+  const L=(tx-14)*T,R=Math.min(W,tx+5)*T;
+  return {x:tx*T-6,y:ty*T,w:28,h:24,hp:BOSS_HP,mode:'wait',t:0,inv:0,L,R,y0:3*T+8,hx:tx*T-6,face:-1};
+}
+function bossActive(){return boss&&!['wait','gone'].includes(boss.mode)}
+function hitBoss(b,dmg){
+  if(b.inv||b.hp<=0||b.mode==='leave')return false;
+  b.hp-=dmg;b.inv=50;score+=500;pops.push({x:b.x+14,y:b.y,t:0,txt:'+500'});
+  beep(180,.18,'square',.06,90);setTimeout(()=>beep(140,.2,'square',.05,70),90);puff(b.x+14,b.y+12,'#c9a27a');
+  if(b.hp<=0){b.mode='leave';b.t=0;score+=5000;pops.push({x:b.x+14,y:b.y-10,t:0,txt:'+5000'});
+    [392,523,659,784,1047].forEach((f,i)=>setTimeout(()=>beep(f,.16,'triangle',.07),i*120))}
+  else if(b.mode==='swoop'){b.mode='hover';b.t=0;b.hx=b.x}
+  return true;
+}
+function bossAI(b,p){
+  b.t++;if(b.inv>0)b.inv--;
+  const angry=b.hp<=BOSS_HP/2,px=p.x+6;
+  if(b.mode==='wait'){if(p.x>b.L+T){b.mode='intro';b.t=0;[330,262].forEach((f,i)=>setTimeout(()=>beep(f,.25,'triangle',.08,f*.9),i*260))}return}
+  if(b.mode==='intro'){b.y+=(b.y0-b.y)*.05;if(b.t>70){b.mode='hover';b.t=0;b.hx=b.x}}
+  else if(b.mode==='hover'){
+    const cx=Math.max(b.L,Math.min(b.R-b.w,b.hx+Math.sin(b.t/30)*40));b.x+=(cx-b.x)*.08;b.y=b.y0+Math.sin(b.t/18)*6;
+    b.face=px<b.x+14?-1:1;
+    if(b.t>(angry?70:110)){b.mode='warn';b.t=0;beep(520,.08,'square',.05);setTimeout(()=>beep(520,.08,'square',.05),140)}
+  }else if(b.mode==='warn'){b.x+=Math.sin(b.t)*.8;if(b.t>(angry?22:34)){b.mode='swoop';b.t=0;b.sx=b.x;const tx=px-14;b.ex=Math.max(b.L,Math.min(b.R-b.w,2*tx-b.sx));b.face=b.ex>b.sx?1:-1}}
+  else if(b.mode==='swoop'){ // U-shaped dive: lowest point (just above the ground) is right where Ryzhik stood
+    const dur=angry?60:78,k=Math.min(1,b.t/dur);
+    b.x=b.sx+(b.ex-b.sx)*k;b.y=b.y0+(13*T-b.h-4-b.y0)*Math.sin(Math.PI*k);
+    if(k>=1){b.mode='hover';b.t=0;b.hx=b.x}
+  }else if(b.mode==='leave'){b.y-=1.6;b.x+=1.2;if(b.y<-60)b.mode='gone'}
+  // contact
+  if(b.mode!=='leave'&&b.mode!=='intro'&&hit(p,b)){
+    if(p.vy>0&&p.y+p.h-p.vy<=b.y+10){if(hitBoss(b,2)){p.vy=jumpHeld()?-7:-5;p.usedDbl=false}else p.vy=-4}
+    else if(!b.inv)hurt();
+  }
+  for(const k of sparks)if(k.t<999&&b.mode!=='leave'&&hit(k,b)){k.t=999;hitBoss(b,1)}
 }
 function die(){
   if(player.dead)return;player.dead=1;player.vy=-6;player.vx=0;beep(392,.5,'triangle',.07,98);
@@ -191,6 +232,7 @@ function update(){
       else hurt();
     }
   }
+  if(boss&&boss.mode!=='gone')bossAI(boss,p);
   // checkpoints: a lantern lights up as Ryzhik passes it
   for(const c of checks){
     if(c.lit){c.t++;continue}
@@ -199,7 +241,7 @@ function update(){
       [659,880,1319].forEach((f,i)=>setTimeout(()=>beep(f,.12,'triangle',.05),i*80))}
   }
   // goal
-  if(p.x+p.w>=flagX*T+6&&state==='play'){state='win';score+=1000;p.vx=0;[523,659,784,1047].forEach((f,i)=>setTimeout(()=>beep(f,.18,'triangle',.07),i*130))}
+  if(p.x+p.w>=flagX*T+6&&state==='play'&&!(boss&&boss.hp>0)){state='win';score+=1000;p.vx=0;[523,659,784,1047].forEach((f,i)=>setTimeout(()=>beep(f,.18,'triangle',.07),i*130))}
 
   for(const q of parts){q.t++;q.vy+=q.s?.02:.3;q.x+=q.vx;q.y+=q.vy}
   parts=parts.filter(q=>q.t<80);
