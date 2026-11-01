@@ -51,20 +51,25 @@ function spawn(dbl){
 }
 const solid=c=>c==='#'||c==='='||c==='B'||c==='G'||c==='P'||c==='u';
 const at=(tx,ty)=>(tx<0||tx>=W)?'#':(ty<0||ty>=H)?'.':grid[ty][tx];
+/* a floating stone ledge (nothing solid under it) is one-way: you jump up through it and land on top.
+   Stairs and pillars that stand on something stay solid from every side. */
+const semi=(tx,ty)=>at(tx,ty)==='='&&!solid(at(tx,ty+1));
+const wallAt=(tx,ty)=>solid(at(tx,ty))&&!semi(tx,ty);
 
 /* ---- physics ---- */
 function moveX(o){
   o.x+=o.vx;
   const y0=Math.floor(o.y/T),y1=Math.floor((o.y+o.h-1)/T);
-  if(o.vx>0){const tx=Math.floor((o.x+o.w)/T);for(let y=y0;y<=y1;y++)if(solid(at(tx,y))){o.x=tx*T-o.w-.01;o.vx=o.isE?-o.vx:0;return true}}
-  else if(o.vx<0){const tx=Math.floor(o.x/T);for(let y=y0;y<=y1;y++)if(solid(at(tx,y))){o.x=(tx+1)*T;o.vx=o.isE?-o.vx:0;return true}}
+  if(o.vx>0){const tx=Math.floor((o.x+o.w)/T);for(let y=y0;y<=y1;y++)if(wallAt(tx,y)){o.x=tx*T-o.w-.01;o.vx=o.isE?-o.vx:0;return true}}
+  else if(o.vx<0){const tx=Math.floor(o.x/T);for(let y=y0;y<=y1;y++)if(wallAt(tx,y)){o.x=(tx+1)*T;o.vx=o.isE?-o.vx:0;return true}}
 }
 function moveY(o,onHead){
   o.y+=o.vy;o.on=false;
   const x0=Math.floor(o.x/T),x1=Math.floor((o.x+o.w-1)/T);
-  if(o.vy>0){const ty=Math.floor((o.y+o.h)/T);for(let x=x0;x<=x1;x++)if(solid(at(x,ty))){o.y=ty*T-o.h;o.vy=0;o.on=true;return}}
+  if(o.vy>0){const ty=Math.floor((o.y+o.h)/T),wasAbove=o.y+o.h-o.vy<=ty*T+.5;
+    for(let x=x0;x<=x1;x++)if(semi(x,ty)?wasAbove:solid(at(x,ty))){o.y=ty*T-o.h;o.vy=0;o.on=true;return}}
   else if(o.vy<0){const ty=Math.floor(o.y/T);
-    let best=null,bd=99;for(let x=x0;x<=x1;x++)if(solid(at(x,ty))||(onHead&&at(x,ty)==='h')){const d=Math.abs((x+.5)*T-(o.x+o.w/2));if(d<bd){bd=d;best=x}}
+    let best=null,bd=99;for(let x=x0;x<=x1;x++)if(wallAt(x,ty)||(onHead&&at(x,ty)==='h')){const d=Math.abs((x+.5)*T-(o.x+o.w/2));if(d<bd){bd=d;best=x}}
     if(best!==null){o.y=(ty+1)*T;o.vy=0;onHead&&onHead(best,ty)}}
 }
 function bump(tx,ty){
